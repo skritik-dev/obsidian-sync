@@ -4,6 +4,7 @@
 # Data directories
 couchdb_data/
 backups/
+tailscale_data/
 
 # System files
 .DS_Store
