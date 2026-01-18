@@ -1,26 +1,52 @@
 services:
+  # Gateway
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: obsidian-tailscale
+    hostname: ${TS_HOSTNAME}
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+    volumes:
+      - tailscale_data:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    restart: unless-stopped
+    healthcheck:
+       test: ["CMD", "tailscale", "status"]
+       interval: 10s
+       timeout: 5s
+       retries: 3
+
+  # Database
   couchdb:
     image: kritik95/obsidian-couchdb:latest
     container_name: obsidian-db
     restart: unless-stopped
+    network_mode: service:tailscale 
     environment:
       - COUCHDB_USER=${COUCHDB_USER}
       - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
     volumes:
       - couchdb_data:/opt/couchdb/data
-    ports:
-      - "5984:5984"
     healthcheck:
       test: ["CMD-SHELL", "curl -f -u ${COUCHDB_USER}:${COUCHDB_PASSWORD} http://localhost:5984"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # Automation Script
   init-db:
     image: curlimages/curl
+    network_mode: service:tailscale
     depends_on:
+      tailscale:
+         condition: service_healthy
       couchdb:
-        condition: service_healthy
+         condition: service_healthy
     environment:
       - COUCHDB_USER=${COUCHDB_USER}
       - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
@@ -28,21 +54,14 @@ services:
     entrypoint: >
       /bin/sh -c "
         echo '[~] Waiting for CouchDB...';
-        until curl -s http://couchdb:5984 > /dev/null; do sleep 2; done;
+        # CHANGED: 'couchdb' -> 'localhost' because they share the network
+        until curl -s http://localhost:5984 > /dev/null; do sleep 2; done;
         echo '[~] Creating databases...';
-        curl -X PUT -u ${COUCHDB_USER}:${COUCHDB_PASSWORD} http://couchdb:5984/${COUCHDB_DB_NAME};
-        curl -X PUT -u ${COUCHDB_USER}:${COUCHDB_PASSWORD} http://couchdb:5984/_users;
+        curl -X PUT -u ${COUCHDB_USER}:${COUCHDB_PASSWORD} http://localhost:5984/${COUCHDB_DB_NAME};
+        curl -X PUT -u ${COUCHDB_USER}:${COUCHDB_PASSWORD} http://localhost:5984/_users;
         echo '[OK] Done';
       "
-
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    container_name: obsidian-tunnel
-    restart: unless-stopped
-    command: tunnel --url http://couchdb:5984
-    depends_on:
-      couchdb:
-        condition: service_healthy
-
+      
 volumes:
   couchdb_data:
+  tailscale_data:
