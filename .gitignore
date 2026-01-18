@@ -1,2 +1,10 @@
+# Environment variables
 .env
+
+# Data directories
 couchdb_data/
+backups/
+
+# System files
+.DS_Store
+Thumbs.db
