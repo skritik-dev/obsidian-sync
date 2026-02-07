@@ -14,9 +14,10 @@ echo "Starting backup for Obsidian Database..."
 
 # Improved Method: Stream output directly to host file
 # 'tar czf -' tells tar to write to Standard Output instead of a file
+# Using alpine for faster backups (also less storage)
 docker run --rm \
   --volumes-from obsidian-db \
-  ubuntu \
+  alpine \
   tar czf - /opt/couchdb/data > "$BACKUP_DIR/$BACKUP_FILE"
 
 echo "[OK] Backup complete: $BACKUP_DIR/$BACKUP_FILE"

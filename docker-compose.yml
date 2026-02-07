@@ -1,7 +1,7 @@
 services:
   # Gateway
   tailscale:
-    image: tailscale/tailscale:latest
+    image: tailscale/tailscale:stable
     container_name: obsidian-tailscale
     hostname: ${TS_HOSTNAME}
     environment:
