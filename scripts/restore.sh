@@ -26,8 +26,8 @@ echo "Restoring data..."
 docker run --rm \
   --volumes-from obsidian-db \
   -i \
-  ubuntu \
-  bash -c "cd / && tar xzf -" < "$BACKUP_FILE"
+  alpine \
+  sh -c "cd / && tar xzf -" < "$BACKUP_FILE"
 
 echo "Restarting database..."
 docker compose start couchdb
